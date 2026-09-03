@@ -1,0 +1,135 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+    id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
+}
+
+def commonJava = file(rootProject.projectDir.parentFile.toPath().resolve('common-src/src/main/java').toString())
+def commonResources = file(rootProject.projectDir.parentFile.toPath().resolve('common-src/src/main/resources').toString())
+
+version = mod_version
+group = maven_group
+
+base {
+    archivesName = mod_id
+}
+
+// Java toolchain: Forge 1.20.1 targets Java 17
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+println("Java: ${System.getProperty('java.version')} (${System.getProperty('java.specification.version')})")
+println("JVM:  ${System.getProperty('java.vm.specification.version')} (${System.getProperty('java.vm.version')})")
+
+repositories {
+    maven { url = 'https://maven.createmod.net' }
+    maven { url = 'https://maven.neoforged.net/releases' }
+    mavenLocal()
+}
+
+minecraft {
+    mappings channel: 'parchment', version: "${parchment_version}-${minecraft_version}"
+
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run/client')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods { "${mod_id}" { source sourceSets.main } }
+        }
+        server {
+            workingDirectory project.file('run/server')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods { "${mod_id}" { source sourceSets.main } }
+        }
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            mods { "${mod_id}" { source sourceSets.main } }
+        }
+    }
+}
+
+// Include the shared version-agnostic source tree (mixin + logic)
+sourceSets {
+    main {
+        java { srcDir commonJava }
+        resources { srcDir commonResources }
+    }
+}
+
+mixin {
+    add sourceSets.main, 'ponderpp.refmap.json'
+    config 'ponderpp.mixins.json'
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    implementation fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}")
+    implementation fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
+
+    compileOnly 'org.spongepowered:mixin:0.8.5'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'     : mod_id,
+            'Specification-Vendor'    : mod_author,
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : project.name,
+            'Implementation-Version'  : project.jar.archiveVersion,
+            'Implementation-Vendor'   : mod_author,
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+jar.finalizedBy('reobfJar')
+
+processResources {
+    filteringCharset = 'UTF-8'
+    def expandProps = [
+        'version'              : version,
+        'mod_id'               : mod_id,
+        'mod_name'             : 'Ponder++ \u601D\u7D22++', // 思索++ （UTF-8 安全写法，避免 gradle.properties 编码问题）
+        'mod_author'           : mod_author,
+        'mod_license'          : mod_license,
+        'minecraft_version'    : minecraft_version,
+        'forge_version'        : forge_version,
+        'forge_version_range'  : '[47,)',
+        'minecraft_version_range' : '[1.20.1,1.21)',
+        'ponder'               : '[0.0,)',
+        'pack_format'          : 15
+    ]
+    filesMatching(['*.mixins.json', 'pack.mcmeta', 'META-INF/mods.toml']) {
+        expand expandProps
+    }
+    inputs.properties(expandProps)
+
+    // Forge 在运行时以 SRG 名执行 Mixin，因此必须在 mixin 配置里显式声明 refmap。
+    // （Mixin 插件的 `config` 注入目标源集，而 shared 源里的配置经 expand 重写后
+    //  不会保留插件写入的 refmap 引用，故在此补上。）
+    doLast {
+        def mixinJson = file("${buildDir}/resources/main/ponderpp.mixins.json")
+        if (mixinJson.exists()) {
+            def txt = mixinJson.getText('UTF-8')
+            if (!txt.contains('"refmap"')) {
+                mixinJson.setText(txt.replace('"client"', '"refmap": "ponderpp.refmap.json",\n    "client"'), 'UTF-8')
+            }
+        }
+    }
+}

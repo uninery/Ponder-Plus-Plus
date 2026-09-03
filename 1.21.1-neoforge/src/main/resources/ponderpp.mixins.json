@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.ponderpp.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "PonderUIMixin",
+    "NeoPonderUIRenderMixin",
+    "PonderTooltipHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
