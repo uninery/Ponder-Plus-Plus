@@ -11,8 +11,8 @@ java {
 version = property("mod_version")
 group = property("maven_group")
 
-val commonJava = File(rootProject.projectDir.parentFile, "common-src/src/main/java")
-val commonResources = File(rootProject.projectDir.parentFile, "common-src/src/main/resources")
+val commonJava = File(projectDir, "common-src/src/main/java")
+val commonResources = File(projectDir, "common-src/src/main/resources")
 
 neoForge {
     version = "21.1.206"
