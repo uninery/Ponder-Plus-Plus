@@ -16,15 +16,6 @@
 
 暂停时正在淡入或淡出的文字会闪烁，粒子效果和正在旋转的情景会抽搐。
 
-## 支持版本
-
-| Minecraft | 加载器   | 源码分支          | 依赖 Ponder |
-|-----------|----------|-------------------|-------------|
-| 1.20.1    | Forge    | `1.20.1-forge`     | `net.createmod.ponder:Ponder-Forge-1.20.1` |
-| 1.21.1    | NeoForge | `1.21.1-neoforge`  | `net.createmod.ponder:Ponder-NeoForge-1.21.1` |
-
-不同 Minecraft 版本分别放在两条 git 分支上，每条分支都是一个完整、可独立构建的工程，checkout 到对应分支即可构建该版本。与加载器无关的代码放在 `common-src/src`，两条分支共用同一份，改动后需要同步到另一条分支（或 cherry-pick）。
-
 ## 安装
 
 1. 安装对应 Minecraft 版本的 Forge 或 NeoForge，以及 Ponder（本模组依赖的思索库）。
@@ -42,21 +33,6 @@ cd Ponder-Plus-Plus
 ```
 
 Windows 下用 `gradlew.bat` 代替 `./gradlew`；首次构建需要联网下载 Gradle 与依赖。
-
-## 工程结构
-
-```
-.
-├── build.gradle.kts   # ModDevGradle 构建脚本
-├── settings.gradle.kts / gradle.properties
-├── gradlew / gradlew.bat / gradle/
-├── common-src/src/           # 两条分支共用的版本无关代码
-│   ├── main/java/com/ponderpp/
-│   │   ├── PonderPpClient.java       # 暂停状态持有者
-│   │   └── mixin/PonderUIMixin.java  # 暂停冻结 + 暂停按钮绘制/点击 + 进度条点击/拖动 + 关闭清理
-│   └── main/resources/
-└── src/main/{java,resources}  # 本加载器专属：入口、Mixin 注册、neoforge.mods.toml、accesstransformer.cfg
-```
 
 ## 实现原理
 
